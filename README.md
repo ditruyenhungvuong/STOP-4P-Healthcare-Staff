@@ -24,7 +24,9 @@ bản đồ điểm đau, thư giãn, capybara gọi tên cảm xúc, đám mây
 | S05 Check-in | Nhiều cảm xúc (ảnh capybara), thang 0–10, văn bản tự do ≤ 2.000 ký tự, tình huống, thời gian, "đang làm việc cần tập trung", **cảnh báo thông tin nhận diện** (SĐT, dãy số dài, số giường, mã bệnh án, danh xưng + tên) |
 | S06 Gợi ý | Kiểm tra an toàn bằng luật trước; tối đa 2 bài trong danh mục; sửa nhãn; đổi gợi ý; "Tôi cần người hỗ trợ" |
 | S07 Trình phát | 12 hoạt động của mục 4 — thở 4-6 / hộp / 4-7-8 (có cổng xác nhận nín thở), HUM, grounding 5-4-3-2-1, PMR, nhật ký, biết ơn, âm thanh (tự tạo bằng WebAudio, không tự phát), nghỉ ngắn phục hồi; nút "Trở về thở tự nhiên" |
+| **4 trạm – 1 phút bình an** | Module thả lỏng thân – tâm 8–10 phút: khởi động (tự chấm căng thẳng 0–10) → 4 trạm **hơi thở → vai gáy → mặt và hàm → tâm trí**, mỗi trạm đi qua 4 nhịp **Nhận biết → Trải nghiệm → Buông lỏng → Cảm nhận** có hẹn giờ nhẹ (90 giây, riêng trạm tâm trí 2 phút), tạm dừng / "Tiếp" / bỏ qua trạm; người chơi tự bấm "Tôi đã…" để mở khóa trạm, đếm 0/4. Kết thúc: chấm lại 0–10, chọn vùng thả lỏng rõ nhất, ghi chú tùy chọn và thông điệp kết thúc |
 | **Hành trình STOP-4P** | Trò chơi 9 chặng: check-in → STOP bầy khỉ (giữ chuông 3 giây) → rồng thổi chong chóng (giữ = hít vào, thả = thở ra) → điểm đau (hình NVYT mặc scrubs) → thư giãn từng vùng → gọi tên cảm xúc → thả mây → hũ bình an → 3 lời biết ơn (cây ra lá). Chặng nào cũng bỏ qua được, nhảy tự do trên bản đồ; không điểm số, không streak |
+| **Giọng đọc người quản trò** | Giọng máy của thiết bị (Web Speech API) đọc lời dẫn cho **mọi bài tập và cả hai trò chơi**: nút bật/tắt, chọn **giọng nữ / giọng nam**, chế độ "chậm hơn", nút "Đọc lại". Mặc định tắt; chỉ phát sau khi người dùng bấm; tự dừng khi đổi màn hình hoặc mở "Trở về thở tự nhiên". Lời dẫn chia thành từng câu với **khoảng dừng 5–10 giây** để người nghe kịp cảm nhận |
 | S08 Check-out | Thang 0–10 (có "không muốn trả lời"), Phù hợp / Không phù hợp / Khó chịu hơn / Chưa chắc; "khó chịu hơn" → dừng, thở tự nhiên, tìm hỗ trợ |
 | S09 Hành trình | Chỉ member: dòng thời gian, biểu đồ trước/sau, bài hữu ích, xóa từng mục (bấm 2 lần), xuất JSON/CSV, xóa toàn bộ, xóa tài khoản |
 | S10 Hỗ trợ | Truy cập từ mọi màn hình; 115; người tin cậy; kênh của cơ sở (cấu hình); mệt mỏi ảnh hưởng người bệnh |
@@ -38,7 +40,20 @@ bản đồ điểm đau, thư giãn, capybara gọi tên cảm xúc, đám mây
 - Ca nặng / tự trách, trống rỗng, kiệt sức kéo dài → luôn hiện thẻ hỗ trợ con người.
 
 ## Quyền riêng tư trong bản demo
-- **Ẩn danh:** không ghi gì vào localStorage, cookie hay máy chủ; đóng/tải lại trang là mất.
+- **Ẩn danh:** không ghi check-in, nhật ký hay bất kỳ nội dung nào vào localStorage, cookie hay máy chủ; đóng/tải lại trang là mất. Ngoại lệ duy nhất là tùy chọn giọng đọc (`stop4p_voice`: bật/tắt, nữ/nam, tốc độ) — thiết lập hiển thị, không phải dữ liệu sức khỏe.
+- **Giọng đọc:** chạy hoàn toàn trong trình duyệt bằng giọng có sẵn của thiết bị, không gọi dịch vụ ngoài, không đọc nội dung người dùng tự viết. Nếu máy chưa cài giọng tiếng Việt, app báo rõ và hướng dẫn cách cài; lúc đó giọng mặc định sẽ phát âm sai.
+
+### Giọng tiếng Việt trên từng nền tảng
+App tự dò giọng `vi-*` của thiết bị, ưu tiên giọng "Natural/Neural", và ghi rõ đang dùng giọng nào.
+
+| Nền tảng | Giọng tiếng Việt thường có | Kết quả trong app |
+|---|---|---|
+| Windows + Chrome | `Microsoft An` (nam, cài qua Cài đặt › Giọng nói) | Giọng nam thật; giọng nữ là **mô phỏng** (dùng An, nâng cao độ) |
+| Microsoft Edge | `Microsoft HoaiMy` (nữ) và `NamMinh` (nam), giọng tự nhiên | Có đủ hai giọng thật — nên dùng Edge nếu cần giọng nữ |
+| Android | `vi-vn-x-vif` (nữ), `vi-vn-x-vim` (nam) | Đủ hai giọng thật |
+| iPhone/iPad | `Linh` (nữ) | Giọng nữ thật; giọng nam mô phỏng |
+
+Lưu ý: trình duyệt chỉ nạp danh sách giọng **lúc khởi động**. Vừa cài giọng xong thì phải đóng hẳn trình duyệt rồi mở lại, sau đó bấm "↻ Làm mới giọng" trong app.
 - **Member (demo):** dữ liệu nằm trong localStorage **của thiết bị này**, khóa bằng SHA-256 (có salt) của số điện thoại; không lưu số nguyên văn. Lưu hành trình, lưu nội dung tự viết và đồng ý nghiên cứu là ba đồng ý riêng (hai mục sau mặc định tắt).
 - Không có trang quản trị, không thống kê theo khoa, không xếp hạng.
 
@@ -62,6 +77,7 @@ js/config.js   cấu hình của đơn vị triển khai
 js/data.js     danh mục bài tập, cảm xúc, tình huống, từ khóa
 js/engine.js   an toàn + gợi ý + phát hiện thông tin nhận diện + adapter AI
 js/store.js    lưu trữ member (demo, localStorage)
+js/voice.js    giọng đọc người quản trò (Web Speech API, nữ/nam, khoảng dừng)
 js/players.js  trình phát bài tập + trò chơi STOP-4P
 js/app.js      điều hướng và các màn hình S01–S10
 tools/serve.ps1  web server tĩnh cho Windows

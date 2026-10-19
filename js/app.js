@@ -44,7 +44,7 @@
 
   /* ================= Trạng thái ================= */
   const newCheckin = () => ({ emotions: [], distress: null, narrative: '', contexts: [], minutes: null, focusTask: false, piiAck: false, labelsEdited: false, done: false });
-  const newSession = () => ({ id: uid(), startedAt: new Date().toISOString(), exercises: [], distressAfter: null, fit: null, stop4p: null, journal: null, saved: false });
+  const newSession = () => ({ id: uid(), startedAt: new Date().toISOString(), exercises: [], distressAfter: null, fit: null, stop4p: null, relax4: null, journal: null, saved: false });
 
   const state = {
     mode: null, memberKey: null, account: null,
@@ -58,6 +58,7 @@
   /* ================= Hẹn giờ & dọn dẹp giữa các màn hình ================= */
   let cleanups = [];
   let currentActions = null; // hành động riêng của màn hình hiện tại
+  let narration = null;      // đoạn lời dẫn đang hiển thị (để đọc lại khi bật giọng)
   const lifecycle = {
     later(fn, ms) { const id = setTimeout(fn, ms); cleanups.push(() => clearTimeout(id)); return id; },
     every(fn, ms) { const id = setInterval(fn, ms); cleanups.push(() => clearInterval(id)); return id; },
@@ -71,6 +72,7 @@
     onCleanup(fn) { cleanups.push(fn); }
   };
   function runCleanups() {
+    window.STOP4P_VOICE?.stop(); // dừng lời dẫn khi rời màn hình
     const list = cleanups; cleanups = []; currentActions = null;
     list.forEach(fn => { try { fn(); } catch (e) { /* bỏ qua */ } });
   }
@@ -164,6 +166,11 @@
         steps_done: s.stop4p.done, steps_skipped: s.stop4p.skipped, breaths: s.stop4p.breaths,
         pain_zones: s.stop4p.pain, named_emotions: s.stop4p.named, clouds: s.stop4p.clouds,
         ...(withText ? { self_note: s.stop4p.selfNote || null, gratitude: s.stop4p.gratitude || [] } : {})
+      } : null,
+      relax4: s.relax4 ? {
+        stations_done: s.relax4.done, stations_skipped: s.relax4.skipped,
+        tension_before: s.relax4.before, tension_after: s.relax4.after, most_relaxed: s.relax4.bestZone,
+        ...(withText ? { notice: s.relax4.notice || null } : {})
       } : null
     };
     if (withText) { rec.narrative = c.narrative || null; rec.journal = s.journal || null; }
@@ -539,6 +546,7 @@
           <div class="tiles">
             <button class="tile main" data-act="newCheckin"><span class="t-icon">✋</span><b>Bắt đầu DỪNG 5</b><small>Check-in 1 phút · nhận tối đa 2 gợi ý</small></button>
             <button class="tile game" data-act="startEx" data-id="STOP4P_FULL"><span class="t-icon">🗺️</span><b>Hành trình STOP-4P</b><small>9 chặng · 8–10 phút · bỏ qua chặng nào cũng được</small></button>
+            <button class="tile calm" data-act="startEx" data-id="RELAX_4STATIONS"><span class="t-icon">🧘</span><b>4 trạm – 1 phút bình an</b><small>Hơi thở · vai gáy · mặt – hàm · tâm trí · 8–10 phút</small></button>
             <button class="tile" data-go="library"><span class="t-icon">📚</span><b>Thư viện bài tập</b><small>Thở, grounding, ngủ, nghỉ ngắn…</small></button>
             ${state.mode === 'member'
               ? '<button class="tile" data-go="journey"><span class="t-icon">📈</span><b>Hành trình của tôi</b><small>Chỉ bạn xem được</small></button>'
@@ -805,6 +813,7 @@
           </header>
           ${ex.type !== 'journey' ? `<p class="ex-safety">⚠️ ${esc(ex.safety)}</p>` : ''}
           ${safetyLine}
+          ${window.STOP4P_VOICE ? window.STOP4P_VOICE.barHTML() : ''}
           <div class="player-body" id="player-body">${player.render(ex, api)}</div>
           <div class="natural-overlay" id="natural" hidden>
             <div class="natural-card">
@@ -830,8 +839,15 @@
       if (!ex) return;
       const player = window.STOP4P_PLAYERS[ex.type];
       const local = { pause: null };
+      const V = window.STOP4P_VOICE;
+      if (V) {
+        const replay = () => { if (narration) V.say(narration); };
+        lifecycle.on(root, 'click', e => V.onBarClick(e, root, replay));
+        lifecycle.onCleanup(V.watchVoices(root));
+        lifecycle.onCleanup(() => { narration = null; });
+      }
       screenActions({
-        natural: () => { if (local.pause) local.pause(); $('#natural', root).hidden = false; $('#natural h2', root).focus?.(); },
+        natural: () => { if (local.pause) local.pause(); window.STOP4P_VOICE?.stop(); $('#natural', root).hidden = false; $('#natural h2', root).focus?.(); },
         closeNatural: () => { $('#natural', root).hidden = true; },
         finishExercise: () => go('checkout')
       });
@@ -876,7 +892,10 @@
       screenActions({
         finishCheckout: () => {
           if (!touched) s.distressAfter = null;
-          if (state.checkin.distress == null && s.stop4p?.distress0 != null) state.checkin.distress = s.stop4p.distress0;
+          if (state.checkin.distress == null) {
+            if (s.stop4p?.distress0 != null) state.checkin.distress = s.stop4p.distress0;
+            else if (s.relax4?.before != null) state.checkin.distress = s.relax4.before;
+          }
           const saved = saveSession();
           go('done', { saved }, { replace: true });
         }
@@ -1097,7 +1116,9 @@
     render: () => `
       <section class="about">
         <h1>Quyền riêng tư &amp; giới hạn</h1>
-        <div class="card"><h2>Ẩn danh</h2><p>Không cần số điện thoại. Không tạo tài khoản, không lưu gì xuống thiết bị hay máy chủ. Nội dung mất khi đóng hoặc tải lại trang.</p></div>
+        <div class="card"><h2>Ẩn danh</h2><p>Không cần số điện thoại. Không tạo tài khoản, không lưu check-in hay nội dung bạn viết xuống thiết bị và máy chủ. Nội dung mất khi đóng hoặc tải lại trang.</p>
+          <p class="fine">Ngoại lệ duy nhất: tùy chọn giọng đọc (bật/tắt, giọng nữ hay nam, tốc độ) được nhớ trên trình duyệt này để lần sau không phải chỉnh lại. Đây là thiết lập hiển thị, không phải nội dung check-in.</p></div>
+        <div class="card"><h2>Giọng đọc</h2><p>Lời dẫn do giọng máy sẵn có của thiết bị đọc, mặc định tắt và chỉ phát khi bạn bấm bật. Ứng dụng chỉ đọc lời dẫn được soạn sẵn, không đọc nội dung bạn tự viết và không gửi gì ra ngoài.</p></div>
         <div class="card"><h2>Đăng nhập bằng số điện thoại</h2><p>Chỉ lưu khi bạn đồng ý; tách riêng đồng ý lưu hành trình, lưu nội dung tự viết và nghiên cứu (hai mục sau mặc định tắt). Bạn có thể xem, xuất, xóa từng mục hoặc toàn bộ.</p>
           ${C.OTP_MODE === 'dev-mock' ? '<p class="dev-banner">Bản demo: OTP giả lập, dữ liệu lưu cục bộ trên thiết bị này dưới khóa là mã băm của số điện thoại (không lưu số nguyên văn). Bản chính thức cần máy chủ, SMS OTP thật và mã hóa dữ liệu.</p>' : ''}</div>
         <div class="card"><h2>Gợi ý tự động</h2><p>${C.AI_RECOMMEND_ENDPOINT ? 'Có dùng AI phía máy chủ; kết quả luôn được kiểm tra lại bằng danh mục bài đã biên soạn.' : 'Hiện dùng bộ luật an toàn chạy ngay trong trình duyệt, chưa kết nối AI; nội dung bạn viết không rời khỏi thiết bị.'} Gợi ý tối đa 2 bài, bạn có thể sửa nhãn hoặc từ chối. Không chẩn đoán, không chấm điểm nguy cơ.</p></div>
@@ -1112,6 +1133,10 @@
     state, lifecycle, esc, capy, assetImg, reduceMotion, toast, go, hasConsent, uid,
     screenActions: obj => { currentActions = Object.assign({}, currentActions, obj); },
     ensureCheckinDistress: v => { if (state.checkin.distress == null) state.checkin.distress = v; },
+    // Lời dẫn của "người quản trò": nhớ đoạn hiện tại để nút "Đọc lại" và lúc bật giọng đọc lại đúng chỗ.
+    narrate: segs => { narration = segs; window.STOP4P_VOICE?.say(segs); },
+    cue: text => window.STOP4P_VOICE?.cue(text),
+    voiceOn: () => !!window.STOP4P_VOICE?.isOn(),
     finish: () => go('checkout'),
     rerender
   };

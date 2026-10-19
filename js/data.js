@@ -11,6 +11,11 @@ window.STOP4P_DATA = (() => {
       goal: 'Chuỗi 9 chặng: check-in → bầy khỉ → rồng thổi chong chóng → điểm đau → thư giãn → gọi tên cảm xúc → đám mây → kết nối bản thân → 3 lời biết ơn.',
       safety: 'Có thể bỏ qua bất kỳ chặng nào. Lời biết ơn không bắt buộc, nhất là khi đang buồn hay giận.'
     },
+    RELAX_4STATIONS: {
+      title: '4 trạm – 1 phút bình an', icon: '🧘', min: 8, max: 10, type: 'stations',
+      goal: 'Lần lượt thả lỏng hơi thở → vai gáy → mặt và hàm → tâm trí, mỗi trạm đi qua 4 nhịp: nhận biết → trải nghiệm → buông lỏng → cảm nhận.',
+      safety: 'Không có thắng thua, không cần làm đúng. Mọi động tác đều nhẹ nhàng, không gây đau; có thể mở mắt và bỏ qua động tác nào không thoải mái.'
+    },
     STOP_PAUSE: {
       title: 'Dừng 5 giây', icon: '✋', min: 0.5, max: 1, type: 'steps',
       goal: 'Dừng lại, thả lỏng vai và hàm, rồi chọn bước tiếp theo.',

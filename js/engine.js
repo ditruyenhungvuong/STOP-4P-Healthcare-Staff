@@ -101,7 +101,7 @@ window.STOP4P_ENGINE = (() => {
       safety.ask_human = true;
     } else if (contexts.includes('sleep')) {
       need = 'Chuẩn bị cho giấc nghỉ';
-      candidates = ['PMR_SHORT', 'JOURNAL', 'AUDIO_CALM', 'BREATHE_46'];
+      candidates = ['PMR_SHORT', 'RELAX_4STATIONS', 'JOURNAL', 'AUDIO_CALM', 'BREATHE_46'];
       summary = 'Đầu óc còn "chạy" sau ca làm việc khiến việc ngủ khó hơn. Mình thử giúp cơ thể và suy nghĩ chậm lại nhé.';
       notes.push('Các bài tập không phải là cách điều trị mất ngủ. Nếu khó ngủ kéo dài, hãy tìm hỗ trợ chuyên môn.');
     } else if (contexts.includes('before_difficult_task')) {
@@ -119,11 +119,11 @@ window.STOP4P_ENGINE = (() => {
       safety.ask_human = true;
     } else if (emo.has('tired') && (emo.has('worried') || emo.has('irritated'))) {
       need = 'Giảm căng thẳng khi mệt';
-      candidates = ['BREATHE_46', 'PMR_SHORT', 'MICRO_RECOVERY'];
+      candidates = ['BREATHE_46', 'RELAX_4STATIONS', 'PMR_SHORT', 'MICRO_RECOVERY'];
       summary = 'Bạn vừa mệt vừa căng. Một bài dịu nhẹ có thể giúp, nhưng nghỉ thật sự khi có thể vẫn quan trọng nhất.';
     } else {
       need = 'Dành một chút thời gian cho mình';
-      candidates = minutes && minutes >= 8 ? ['STOP4P_FULL', 'BREATHE_46', 'GROUND_54321'] : ['BREATHE_46', 'GROUND_54321', 'STOP_PAUSE', 'GRATITUDE_3'];
+      candidates = minutes && minutes >= 8 ? ['STOP4P_FULL', 'RELAX_4STATIONS', 'BREATHE_46', 'GROUND_54321'] : ['BREATHE_46', 'GROUND_54321', 'STOP_PAUSE', 'GRATITUDE_3'];
       summary = emo.has('calm') ? 'Bạn đang khá bình ổn — một khoảnh khắc chăm sóc mình để giữ nhịp.' : 'Cảm ơn bạn đã dừng lại lắng nghe bản thân.';
     }
 
@@ -133,7 +133,7 @@ window.STOP4P_ENGINE = (() => {
     // Lọc theo thời gian, xoay vòng khi người dùng bấm "đổi gợi ý"
     let pool = candidates.filter(id => fits(id, minutes));
     if (!pool.length) pool = ['STOP_PAUSE'];
-    const extras = ['BREATHE_46', 'GROUND_54321', 'STOP_PAUSE', 'HUM', 'MICRO_RECOVERY', 'PMR_SHORT', 'STOP4P_FULL']
+    const extras = ['BREATHE_46', 'GROUND_54321', 'STOP_PAUSE', 'HUM', 'MICRO_RECOVERY', 'PMR_SHORT', 'RELAX_4STATIONS', 'STOP4P_FULL']
       .filter(id => !pool.includes(id) && fits(id, minutes) && !(avoidHold && EXERCISES[id].holdsBreath) && !(input.focusTask && id !== 'STOP_PAUSE'));
     const full = [...pool, ...extras];
     const start = (attempt * 2) % Math.max(full.length, 1);
@@ -157,7 +157,8 @@ window.STOP4P_ENGINE = (() => {
       BOX_4444: 'Nhịp đều giúp tập trung (có nín thở — tùy chọn)', BREATHE_478: 'Thở chậm trước khi nghỉ (tùy chọn)',
       HUM: 'Ngân khẽ khi ở nơi riêng tư', GROUND_54321: 'Trở về hiện tại qua giác quan', PMR_SHORT: 'Thả lỏng cơ thể sau ca dài',
       JOURNAL: 'Viết ra để thấy rõ mình cần gì', GRATITUDE_3: 'Nhận ra điều nhỏ nâng đỡ mình', AUDIO_CALM: 'Âm nền dịu để nghỉ',
-      MICRO_RECOVERY: 'Nghỉ thật: nước, ăn nhẹ, vận động, hỗ trợ', STOP4P_FULL: 'Hành trình đầy đủ khi bạn có 8–10 phút'
+      MICRO_RECOVERY: 'Nghỉ thật: nước, ăn nhẹ, vận động, hỗ trợ', STOP4P_FULL: 'Hành trình đầy đủ khi bạn có 8–10 phút',
+      RELAX_4STATIONS: 'Thả lỏng lần lượt hơi thở, vai gáy, mặt – hàm và tâm trí'
     };
     return r[id] || need;
   }

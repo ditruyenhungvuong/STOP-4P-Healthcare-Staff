@@ -159,6 +159,7 @@ input[type=range] { width: 100%; accent-color: var(--primary); height: 32px; }
 .tile.main { grid-column: 1 / -1; background: linear-gradient(135deg, #2E7D74, #3A8FB0); color: #fff; }
 .tile.main small { color: #e6f4f1; }
 .tile.game { grid-column: 1 / -1; background: linear-gradient(135deg, #FDF1E3, #FDE7EF); }
+.tile.calm { grid-column: 1 / -1; background: linear-gradient(135deg, #E4F2EE, #E1F0F6); }
 .t-icon { font-size: 30px; }
 .quick { margin-top: 18px; }
 .quick-title { font-weight: 600; margin-bottom: 4px; }
@@ -283,6 +284,53 @@ mark { background: #FFE0A8; border-radius: 4px; padding: 0 3px; }
 .urgent-box h2 { font-size: 1.05rem; }
 .urgent-box ul, .support ul { padding-left: 20px; }
 
+/* ---------- Giọng đọc người quản trò ---------- */
+.voice-bar { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 10px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.voice-bar.on { background: var(--teal-soft); border-color: #bcdfec; }
+.btn-voice { min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--teal); background: var(--surface); color: #1f5f78; font: 600 15px var(--font); cursor: pointer; }
+.voice-bar.on .btn-voice { background: var(--teal); color: #fff; }
+.voice-opts { margin: 0; gap: 6px; }
+.voice-opts .chip { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.voice-opts .chip i { font-style: normal; opacity: .7; font-size: 11px; }
+.voice-note { width: 100%; margin: 0; }
+
+/* ================= 4 trạm – 1 phút bình an ================= */
+.st-map { list-style: none; display: flex; gap: 10px; justify-content: center; padding: 6px 0 2px; margin: 0; flex-wrap: wrap; }
+.st-node { width: 76px; text-align: center; }
+.st-node button { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); font-size: 24px; cursor: pointer; }
+.st-node span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.st-node.done button { background: var(--primary-soft); border-color: var(--primary); }
+.st-node.done span { color: var(--primary); font-weight: 600; }
+.st-node.skipped button { opacity: .5; }
+.st-node.current button { border-color: var(--warm); box-shadow: 0 0 0 4px var(--warm-soft); }
+.st-progress { text-align: center; font-weight: 600; color: var(--muted); font-size: 14px; margin: 4px 0 10px; }
+.st-head { text-align: center; }
+.st-head h2 { margin-bottom: 2px; }
+.phase-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0; }
+.phase-tabs span { font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.phase-tabs span.passed { background: var(--primary-soft); color: #1d5a53; }
+.phase-tabs span.on { background: var(--primary); color: #fff; font-weight: 600; }
+.st-art { display: grid; place-items: center; margin: 10px 0; min-height: 150px; }
+.st-body { min-height: 120px; }
+.st-phase-name { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--warm); margin-bottom: 4px; }
+.st-aware { font-size: 1.05rem; }
+.st-steps { padding-left: 22px; }
+.st-steps li { margin-bottom: 6px; }
+.st-say { margin: 0; background: var(--primary-soft); border-radius: 14px; padding: 14px; font-size: 1.08rem; font-weight: 500; color: #16524c; }
+.st-nav, .st-confirm { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+.st-confirm { flex-direction: column; }
+.st-checklist { list-style: none; padding: 0; margin: 10px 0; }
+.st-checklist li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.st-message { margin: 14px 0; padding: 14px 16px; border-left: 4px solid var(--teal); background: var(--teal-soft); border-radius: 0 14px 14px 0; }
+.st-intro .capy-wrap, .st-end .capy-wrap { width: auto; margin: 6px auto; }
+.st-intro, .st-end { text-align: left; }
+.st-intro .btn-row, .st-end .btn-row { justify-content: center; }
+.mini-orb { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #E7F6F2, #7CC4B8 70%, #5BAEA1); animation: breath10 10s ease-in-out infinite; }
+.mini-orb.paused { animation-play-state: paused; }
+@keyframes breath10 { 0% { transform: scale(.6); } 40% { transform: scale(1); } 100% { transform: scale(.6); } }
+.sky.mini { width: 100%; height: 150px; }
+.cloud.deco { animation: drift 26s linear infinite; width: 90px; height: 26px; }
+
 /* ================= STOP-4P game ================= */
 .s4-map { list-style: none; display: flex; gap: 6px; overflow-x: auto; padding: 8px 4px 12px; margin: -4px 0 8px; scroll-snap-type: x proximity; scrollbar-width: thin; }
 .node { flex: none; width: 74px; text-align: center; position: relative; scroll-snap-align: center; }
@@ -321,16 +369,32 @@ mark { background: #FFE0A8; border-radius: 4px; padding: 0 3px; }
 
 /* dragon */
 .dragon-scene { position: relative; height: 200px; display: flex; align-items: center; justify-content: space-between; padding: 0 8%; background: linear-gradient(#FDF1F5, #FFF8EE); border-radius: 18px; overflow: hidden; }
-.dragon { font-size: 72px; transform-origin: center; transition: transform .1s linear; }
+/* Emoji rồng mặc định quay sang trái → lật ngang để nhìn về phía chong chóng */
+.dragon { font-size: 72px; transform-origin: center; transform: scaleX(-1); transition: transform .1s linear; }
 .pinwheel-wrap { position: relative; width: 100px; height: 170px; }
 .pinwheel { width: 100px; height: 100px; }
+/* Quay bằng CSS: thở ra thì chạy liên tục, hít vào thì tạm dừng ngay tại chỗ */
+.pinwheel .rotor { transform-box: fill-box; transform-origin: center; animation: pinspin var(--dur, 2.4s) linear infinite; animation-play-state: paused; }
+.pinwheel.spinning .rotor { animation-play-state: running; }
+@keyframes pinspin { to { transform: rotate(360deg); } }
 .stick { position: absolute; left: 48px; top: 50px; width: 5px; height: 115px; background: #b58b5b; border-radius: 3px; z-index: -1; }
-.wind { position: absolute; left: 34%; top: 40%; width: 30%; height: 50px; pointer-events: none; }
-.wind i { position: absolute; left: 0; height: 3px; width: 40px; border-radius: 3px; background: #9fd4ea; opacity: 0; }
-.wind i:nth-child(1) { top: 0; } .wind i:nth-child(2) { top: 20px; } .wind i:nth-child(3) { top: 40px; }
-.wind.blow i { animation: blow 1.6s ease-out; }
-.wind.blow i:nth-child(2) { animation-delay: .2s; } .wind.blow i:nth-child(3) { animation-delay: .4s; }
-@keyframes blow { 0% { opacity: .9; transform: translateX(0); } 100% { opacity: 0; transform: translateX(140%); } }
+/* Luồng gió từ miệng rồng sang chong chóng — chỉ chạy khi đang thở ra */
+.wind { position: absolute; left: 26%; top: 34%; width: 50%; height: 72px; pointer-events: none; }
+.wind i { position: absolute; left: 0; height: 4px; border-radius: 4px; opacity: 0;
+  background: linear-gradient(90deg, rgba(159,212,234,0), #9fd4ea 40%, rgba(159,212,234,.25));
+  animation: blow 1.8s linear infinite; animation-play-state: paused; }
+.wind i:nth-child(1) { top: 4px; width: 34px; animation-delay: 0s; }
+.wind i:nth-child(2) { top: 22px; width: 46px; animation-delay: -.45s; animation-duration: 1.5s; }
+.wind i:nth-child(3) { top: 38px; width: 28px; animation-delay: -.9s; animation-duration: 2.1s; }
+.wind i:nth-child(4) { top: 54px; width: 40px; animation-delay: -1.3s; animation-duration: 1.7s; }
+.wind i:nth-child(5) { top: 66px; width: 22px; animation-delay: -.2s; animation-duration: 2.3s; }
+.wind.blowing i { animation-play-state: running; }
+@keyframes blow {
+  0% { opacity: 0; transform: translateX(0) scaleX(.6); }
+  15% { opacity: .95; }
+  75% { opacity: .75; }
+  100% { opacity: 0; transform: translateX(150%) scaleX(1.15); }
+}
 .energy { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 12px 0 6px; }
 .energy div { height: 100%; width: 0; background: linear-gradient(90deg, #9fd4ea, var(--primary)); }
 .hold-btn { width: 180px; height: 72px; border-radius: 36px; border: 0; background: var(--primary); color: #fff; font: 700 17px var(--font); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-shadow: 0 6px 0 #1f5a53; transition: transform .1s, box-shadow .1s; }

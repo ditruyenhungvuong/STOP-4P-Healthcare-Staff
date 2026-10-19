@@ -97,7 +97,11 @@
         while (inC >= pattern[idx][1] * tempo) { inC -= pattern[idx][1] * tempo; idx++; }
         const [kind, sec, label] = pattern[idx];
         const len = sec * tempo, frac = inC / len;
-        if (idx !== lastPhase) { lastPhase = idx; phaseEl.textContent = label; if ($('#chime', body).checked) chime(kind === 'in' ? 528 : kind === 'out' ? 396 : 440); }
+        if (idx !== lastPhase) {
+          lastPhase = idx; phaseEl.textContent = label;
+          if ($('#chime', body).checked) chime(kind === 'in' ? 528 : kind === 'out' ? 396 : 440);
+          api.cue(label); // nhắc ngắn bằng giọng đọc, nếu người dùng đã bật
+        }
         countEl.textContent = Math.ceil(len - inC);
         setScale(kind === 'in' ? 0.55 + 0.45 * frac : kind === 'out' ? 1 - 0.45 * frac : (idx > 0 && pattern[idx - 1][0] === 'in' ? 1 : 0.55));
         const left = Math.ceil(total - t);
@@ -119,6 +123,7 @@
         $('#bplay', body).textContent = '▶ Bắt đầu lại'; $('#bstop', body).hidden = true;
         remainEl.innerHTML = finished ? '<button class="btn primary" data-act="finishExercise">Check-out</button>' : '';
       }
+      api.narrate([{ t: ex.title + '. ' + ex.goal, pause: 3 }, { t: 'Bạn có thể dừng bất kỳ lúc nào. Nhịp thở chỉ là gợi ý — nếu không hợp, cứ thở theo cách tự nhiên của bạn.', pause: 2 }]);
       $('#bplay', body).addEventListener('click', () => (running ? pause() : start()));
       $('#bstop', body).addEventListener('click', () => stop(false));
       api.lifecycle.onCleanup(() => clearInterval(timer));
@@ -139,11 +144,12 @@
       <div class="step-card" id="stepc" aria-live="polite"></div>
       <div class="dots" id="dots">${STOP_STEPS.map(() => '<span></span>').join('')}</div>
       <div class="btn-row center"><button class="btn soft" id="sprev">‹ Trước</button><button class="btn primary" id="snext">Tiếp ›</button></div>`,
-    mount(body) {
+    mount(body, ex, api) {
       let i = 0;
       const show = () => {
         const [ic, h, p] = STOP_STEPS[i];
         $('#stepc', body).innerHTML = `<div class="step-icon" aria-hidden="true">${ic}</div><h2>${h}</h2><p>${p}</p>`;
+        api.narrate([{ t: h + '.', pause: 2 }, { t: p, pause: 6 }]);
         $$('#dots span', body).forEach((d, k) => d.classList.toggle('on', k <= i));
         $('#sprev', body).disabled = i === 0;
         const n = $('#snext', body);
@@ -168,10 +174,11 @@
     render: () => `
       <div class="ground" id="ground"></div>
       <p class="fine center">Nếu một giác quan khó dùng, hãy thay bằng giác quan khác hoặc một cảm giác trong cơ thể. Không cần tìm bằng mọi giá.</p>`,
-    mount(body) {
+    mount(body, ex, api) {
       let i = 0;
       const show = () => {
         if (i >= GROUND.length) {
+          api.narrate([{ t: 'Bạn đang ở đây, lúc này. Để ý xem cơ thể có thay đổi gì không — không cần phải khác đi.', pause: 4 }]);
           $('#ground', body).innerHTML = `<div class="step-card"><div class="step-icon">🌿</div><h2>Bạn đang ở đây, lúc này.</h2><p>Để ý xem cơ thể có thay đổi gì không — không cần phải khác đi.</p>
             <button class="btn primary" data-act="finishExercise">Check-out</button></div>`;
           return;
@@ -185,6 +192,7 @@
             <div class="tap-dots">${Array.from({ length: n }, (_, k) => `<button class="tap-dot" aria-label="Đã nhận ra điều thứ ${k + 1}"></button>`).join('')}</div>
             <button class="btn soft" id="gnext">${i < GROUND.length - 1 ? 'Tiếp ›' : 'Hoàn thành'}</button>
           </div>`;
+        api.narrate([{ t: p, pause: 10 }, { t: 'Cứ thong thả. Mỗi khi nhận ra một điều, bạn chạm vào một chấm.', pause: 6 }]);
         $$('.tap-dot', body).forEach(d => d.addEventListener('click', () => { d.classList.toggle('on'); vibrate(15); }));
         $('#gnext', body).addEventListener('click', () => { i++; show(); });
       };
@@ -225,6 +233,7 @@
         }
         const [name, tense, relax] = PMR[gi];
         $('#pmrc', body).innerHTML = `<p class="label">${name}</p><h2>${phase === 'tense' ? tense : relax}</h2><p class="fine">${phase === 'tense' ? 'Nhẹ nhàng, không gồng hết sức' : 'Để ý cảm giác khi cơ thả lỏng'}</p>`;
+        api.cue(`${name}. ${phase === 'tense' ? tense : relax}`);
       };
       let lastTs = 0;
       const tick = () => {
@@ -273,6 +282,12 @@
     mount(body, ex, api) {
       const E = window.STOP4P_ENGINE;
       let acked = false;
+      api.narrate([
+        { t: 'Mời bạn viết ngắn gọn ba điều. Thứ nhất: chuyện gì đã xảy ra?', pause: 8 },
+        { t: 'Thứ hai: mình cảm thấy gì?', pause: 8 },
+        { t: 'Và thứ ba: mình cần gì lúc này?', pause: 6 },
+        { t: 'Nhớ không ghi tên, số hồ sơ hay chi tiết có thể nhận diện người bệnh và đồng nghiệp.', pause: 2 }
+      ]);
       $$('textarea', body).forEach(t => t.addEventListener('input', () => { acked = false; $('#jpii', body).innerHTML = ''; }));
       $('#jclear', body).addEventListener('click', () => { $$('textarea', body).forEach(t => { t.value = ''; }); api.state.session.journal = null; api.toast('Đã xóa nội dung nhật ký.'); });
       $('#jdone', body).addEventListener('click', () => {
@@ -321,7 +336,13 @@
     render: (ex, api) => `${gratitudeBlock(undefined, sadNow(api))}
       <p class="fine">Ba điều này chỉ hiện ở đây, không được lưu.</p>
       <div class="btn-row"><button class="btn primary" data-act="finishExercise">Hoàn tất</button><button class="btn soft" data-act="finishExercise">Bỏ qua</button></div>`,
-    mount(body) { bindGratitude(body); }
+    mount(body, ex, api) {
+      api.narrate([
+        { t: 'Nếu thấy phù hợp lúc này, bạn thử nhớ lại ba điều nhỏ đã nâng đỡ mình.', pause: 9 },
+        { t: 'Không cần phải tích cực. Một điều rất nhỏ cũng được, và bạn luôn có thể bỏ qua.', pause: 4 }
+      ]);
+      bindGratitude(body);
+    }
   };
   const sadNow = api => ['sad', 'irritated'].some(c => api.state.checkin.emotions.includes(c));
 
@@ -341,6 +362,8 @@
       </div>`,
     mount(body, ex, api) {
       let nodes = null, mins = 5, endAt = 0, timer = null;
+      api.narrate([{ t: 'Bạn chọn âm nền, chọn thời gian, rồi bấm phát. Âm thanh sẽ tự nhỏ dần khi hết giờ.', pause: 4 },
+        { t: 'Đừng dùng bài này khi đang làm nhiệm vụ cần nghe tín hiệu hay cảnh báo.', pause: 2 }]);
       body.addEventListener('click', e => { const c = e.target.closest('[data-amin]'); if (c) { mins = +c.dataset.amin; $$('[data-amin]', body).forEach(x => x.classList.toggle('on', x === c)); } });
       $('#akind', body).addEventListener('change', e => { $('#aart', body).textContent = { waves: '🌊', rain: '🌧️', pink: '🌫️' }[e.target.value]; if (nodes) { stop(); play(); } });
       $('#avol', body).addEventListener('input', () => { if (nodes) nodes.master.gain.setTargetAtTime(vol(), nodes.ctx.currentTime, 0.2); });
@@ -407,6 +430,11 @@
       <div class="btn-row"><button class="btn primary" data-act="finishExercise">Xong → Check-out</button><button class="btn soft" data-go="support">Tìm hỗ trợ</button></div>`,
     mount(body, ex, api) {
       let timer = null;
+      api.narrate([
+        { t: 'Lúc này điều cơ thể cần có thể là nghỉ thật sự, chứ không phải cố gắng thêm.', pause: 6 },
+        { t: 'Bạn thử chọn những điều mình làm được ngay bây giờ: uống vài ngụm nước, ăn nhẹ nếu đói, đi lại vươn vai một chút.', pause: 7 },
+        { t: 'Nếu mệt mỏi đang ảnh hưởng đến an toàn người bệnh, hãy tạm dừng nhiệm vụ khi có thể và báo người phụ trách.', pause: 3 }
+      ]);
       body.addEventListener('click', e => {
         const c = e.target.closest('[data-rest]');
         if (!c) return;
@@ -464,17 +492,307 @@
       </svg>`;
   }
 
+  /* ================= 4 trạm – 1 phút bình an =================
+   * Nguyên tắc: Nhận biết → Trải nghiệm → Buông lỏng → Cảm nhận.
+   * Người chơi tự bấm "đã trải nghiệm" từng trạm; không ép hoàn thành, không chấm điểm.
+   */
+  const PHASES = [
+    { name: 'Nhận biết', icon: '👁️' },
+    { name: 'Trải nghiệm', icon: '🖐️' },
+    { name: 'Buông lỏng', icon: '🍃' },
+    { name: 'Cảm nhận', icon: '💗' }
+  ];
+  const STATIONS = [
+    {
+      key: 'breath', icon: '🌬️', title: 'Thả lỏng hơi thở', short: 'Hơi thở',
+      goal: 'Đưa hơi thở trở về nhịp điệu tự nhiên.', sec: [20, 40, 20, 10], art: 'orb',
+      aware: 'Hơi thở của bạn lúc này đang nhanh hay chậm, sâu hay nông? Chỉ quan sát, chưa cần sửa gì cả.',
+      steps: ['Hít vào nhẹ nhàng qua mũi.', 'Thở ra chậm và êm.', 'Làm khoảng 4–5 nhịp như vậy.', 'Không cố hít thật sâu, không nín thở.'],
+      say: 'Hít vào, biết mình đang hít vào. Thở ra, cho phép cơ thể mềm xuống một chút.',
+      feel: 'Nhịp thở bây giờ có khác lúc đầu không? Khác hay không khác đều ổn.',
+      check: 'Tôi đã chú ý đến hơi thở'
+    },
+    {
+      key: 'shoulders', icon: '🙆', title: 'Thả lỏng vai gáy', short: 'Vai gáy',
+      goal: 'Nhận biết và giảm căng cơ vùng cổ, vai.', sec: [20, 40, 20, 10], art: 'shoulders',
+      aware: 'Hai vai bạn có đang nhô cao, kéo về phía tai không? Vùng gáy có đang cứng không?',
+      steps: ['Nhẹ nhàng nâng hai vai lên rồi buông xuống — 2–3 lần.', 'Xoay vai chậm về phía sau.', 'Trở về tư thế tự nhiên, để vai được nghỉ.'],
+      say: 'Hãy tưởng tượng trên vai bạn đang mang một chiếc ba lô nặng. Mỗi lần thở ra, bạn đặt xuống một chút sức nặng ấy.',
+      feel: 'Khoảng cách giữa vai và tai bây giờ thế nào?',
+      check: 'Tôi đã buông lỏng hai vai'
+    },
+    {
+      key: 'face', icon: '😌', title: 'Thả lỏng mặt và hàm', short: 'Mặt – hàm',
+      goal: 'Nhận diện những căng thẳng nhỏ trên khuôn mặt.', sec: [20, 40, 20, 10], art: 'face',
+      aware: 'Trán bạn có đang nhíu lại? Hai hàm răng có đang chạm nhau? Lưỡi có đang ép lên vòm miệng?',
+      steps: ['Thả lỏng trán và vùng giữa hai chân mày.', 'Để mí mắt mềm, không nhắm chặt.', 'Thả lỏng hai má và môi.', 'Để hai hàm răng tách nhẹ, lưỡi nghỉ thoải mái.'],
+      say: 'Bạn không cần phải giữ một biểu cảm nào cả. Hãy để khuôn mặt được nghỉ ngơi.',
+      feel: 'Khuôn mặt bạn bây giờ nhẹ đi ở chỗ nào?',
+      check: 'Tôi đã thả lỏng mặt và hàm'
+    },
+    {
+      key: 'mind', icon: '☁️', title: 'Thả lỏng tâm trí', short: 'Tâm trí',
+      goal: 'Quan sát suy nghĩ mà không bị cuốn theo.', sec: [25, 50, 30, 15], art: 'sky',
+      aware: 'Những suy nghĩ nào đang xuất hiện? Chỉ cần biết là chúng đang ở đó.',
+      steps: ['Không xua đuổi, không phân tích, không phán xét.', 'Hình dung mỗi suy nghĩ như một đám mây đang trôi qua.', 'Khi nhận ra mình bị cuốn theo, nhẹ nhàng quay lại hơi thở và cảm giác cơ thể.'],
+      say: 'Bạn không cần làm cho tâm trí hoàn toàn trống rỗng. Hãy cho phép suy nghĩ đến rồi đi, còn bạn chỉ nhẹ nhàng quan sát.',
+      feel: 'Bạn đang ở gần hơi thở hơn, hay vẫn đang theo một dòng suy nghĩ? Cả hai đều bình thường.',
+      check: 'Tôi đã quan sát suy nghĩ'
+    }
+  ];
+
+  const stations = {
+    render: () => `
+      <div class="stations">
+        <ol class="st-map" id="stmap" aria-label="Bốn trạm"></ol>
+        <p class="st-progress" id="stprog" aria-live="polite"></p>
+        <div class="st-stage" id="ststage"></div>
+      </div>`,
+    mount(body, ex, api) {
+      const st = api.state;
+      const s = st.session.relax4 || (st.session.relax4 = { before: st.checkin.distress, after: null, done: [], skipped: [], bestZone: null, notice: '' });
+      const map = $('#stmap', body), prog = $('#stprog', body), stage = $('#ststage', body);
+      let view = 'intro', si = 0, pi = 0, left = 0, running = false, timer = null, lastTs = 0, first = true;
+
+      const stopTimer = () => { clearInterval(timer); timer = null; running = false; };
+      api.lifecycle.onCleanup(stopTimer);
+
+      const drawMap = () => {
+        map.innerHTML = STATIONS.map((x, k) => {
+          const cls = s.done.includes(x.key) ? 'done' : s.skipped.includes(x.key) ? 'skipped' : '';
+          return `<li class="st-node ${cls} ${view === 'station' && k === si ? 'current' : ''}">
+            <button data-st="jump" data-i="${k}" aria-label="Trạm ${k + 1}: ${x.title}${cls === 'done' ? ' (đã trải nghiệm)' : ''}">${x.icon}</button>
+            <span>${x.short}</span></li>`;
+        }).join('');
+        prog.textContent = `${s.done.length}/4 trạm đã trải nghiệm`;
+      };
+
+      const art = (x, phase) => {
+        if (x.art === 'orb') return `<div class="mini-orb ${phase >= 1 && running ? '' : 'paused'}" aria-hidden="true"></div>`;
+        if (x.art === 'sky') return `<div class="sky mini ${api.reduceMotion() ? 'still' : ''}" aria-hidden="true"><div class="sun">☀️</div>
+          ${[0, 1, 2].map(i => `<div class="cloud deco" style="top:${12 + i * 24}%;background:${CLOUD_COLORS[i + 1]};animation-delay:-${i * 8}s">&nbsp;</div>`).join('')}</div>`;
+        const relaxed = s.done.includes('shoulders') ? ['shoulders'] : [];
+        if (s.done.includes('face')) relaxed.push('jaw', 'head');
+        const active = x.art === 'shoulders' ? 'shoulders' : 'jaw';
+        return `<div class="fig-wrap small">${figureSVG({ active, relaxed, smile: s.done.length / 2 - 1 })}</div>`;
+      };
+
+      const renderIntro = () => {
+        stage.innerHTML = `
+          <div class="st-intro">
+            <h2>Khởi động — kết nối với cơ thể</h2>
+            <p>Đôi khi chúng ta căng thẳng mà không nhận ra: hơi thở gấp gáp, hai vai gồng lên, hàm siết chặt, tâm trí chạy liên tục.</p>
+            <p class="gentle">Đây là một trò chơi nhỏ: <b>không có thắng thua, không cần cố làm đúng</b>. Chỉ cần quan sát cơ thể và thử buông lỏng từng chút một. Ngồi hoặc đứng thoải mái, mắt mở hay khép đều được.</p>
+            <label class="label" for="st-before">Mức căng thẳng hiện tại của bạn <small>(0–10, tự đánh giá)</small></label>
+            <div class="capy-wrap" id="st-capy">${api.capy(s.before)}</div>
+            <input type="range" id="st-before" min="0" max="10" value="${s.before ?? 5}">
+            <div class="scale-ends"><span>0 · rất nhẹ nhõm</span><span>10 · rất căng</span></div>
+            <p id="st-beforev" aria-live="polite">${s.before == null ? 'Kéo thanh trượt nếu muốn — hoặc bỏ qua' : `<b>${s.before}</b> · ${D.DISTRESS_LABELS[s.before]}`}</p>
+            <div class="btn-row center"><button class="btn primary" data-st="start">Bắt đầu trạm 1 ›</button></div>
+            <p class="fine center">8–10 phút · bạn có thể dừng hoặc bỏ qua trạm bất kỳ lúc nào.</p>
+          </div>`;
+        api.narrate([
+          { t: 'Trong cuộc sống, đôi khi chúng ta căng thẳng mà không nhận ra. Hơi thở trở nên gấp gáp, hai vai gồng lên, hàm siết chặt và tâm trí liên tục suy nghĩ.', pause: 4 },
+          { t: 'Bây giờ, chúng ta cùng tham gia một trò chơi nhỏ. Không có thắng thua, không cần cố gắng làm đúng. Chỉ cần quan sát cơ thể và thử buông lỏng từng chút một.', pause: 4 },
+          { t: 'Mời bạn ngồi hoặc đứng thoải mái, và cảm nhận mức độ căng thẳng hiện tại của mình, theo thang điểm từ 0 đến 10.', pause: 2 }
+        ]);
+        const r = $('#st-before', stage);
+        r.addEventListener('input', () => {
+          s.before = +r.value; api.ensureCheckinDistress(s.before);
+          $('#st-capy', stage).innerHTML = api.capy(s.before);
+          $('#st-beforev', stage).innerHTML = `<b>${s.before}</b> · ${D.DISTRESS_LABELS[s.before]}`;
+        });
+      };
+
+      const renderStation = () => {
+        const x = STATIONS[si];
+        const waiting = pi >= PHASES.length;
+        const p = waiting ? PHASES.length - 1 : pi;
+        const bodyHTML = [
+          `<p class="st-aware">${x.aware}</p>`,
+          `<ul class="st-steps">${x.steps.map(t => `<li>${t}</li>`).join('')}</ul>`,
+          `<blockquote class="st-say">“${x.say}”</blockquote>`,
+          `<p class="st-aware">${x.feel}</p>`
+        ][p];
+        stage.innerHTML = `
+          <div class="st-head">
+            <p class="s4-count">Trạm ${si + 1}/4</p>
+            <h2>${x.icon} ${x.title}</h2>
+            <p class="fine">${x.goal}</p>
+          </div>
+          <div class="phase-tabs" aria-hidden="true">${PHASES.map((ph, k) => `<span class="${k === p ? 'on' : ''} ${k < p || waiting ? 'passed' : ''}">${ph.icon} ${ph.name}</span>`).join('')}</div>
+          <div class="st-art">${art(x, p)}</div>
+          <div class="st-body" aria-live="polite"><p class="st-phase-name">${PHASES[p].name}</p>${bodyHTML}</div>
+          <div class="progress"><div id="stbar" style="width:${waiting ? 100 : 0}%"></div></div>
+          ${waiting ? `
+            <div class="st-confirm">
+              <button class="btn primary block" data-st="check">${s.done.includes(x.key) ? '✓ ' : ''}${x.check}</button>
+              <div class="btn-row center"><button class="btn ghost" data-st="again">Làm lại trạm này</button>${si < 3 ? '<button class="btn soft" data-st="next-station">Sang trạm sau ›</button>' : '<button class="btn soft" data-st="end">Tới phần cảm nhận ›</button>'}</div>
+            </div>`
+            : `<div class="st-nav">
+                 <button class="btn ghost" data-st="toggle">${running ? '❚❚ Tạm dừng' : '▶ Tiếp tục'}</button>
+                 <button class="btn soft" data-st="skip-phase">Tiếp ›</button>
+                 <button class="btn ghost" data-st="skip-station">Bỏ qua trạm</button>
+               </div>`}
+          <p class="fine center">Giữ nhịp chậm, có thể dừng lại vài giây ở mỗi câu. Động tác nào gây đau thì bỏ qua.</p>`;
+        drawMap();
+        narrateStation(x, p, waiting);
+      };
+
+      // Lời dẫn của người quản trò, có khoảng dừng 5–10 giây để người chơi cảm nhận.
+      let narrKey = '';
+      const narrateStation = (x, p, waiting) => {
+        const key = `${si}-${p}-${waiting}`;
+        if (key === narrKey) return; // tạm dừng/tiếp tục thì không đọc lại từ đầu
+        narrKey = key;
+        if (waiting) return api.narrate([{ t: x.feel, pause: 8 }, { t: 'Khi đã sẵn sàng, bạn xác nhận: ' + x.check + '.', pause: 2 }]);
+        if (p === 0) api.narrate([{ t: 'Trạm ' + (si + 1) + '. ' + x.title + '.', pause: 2 }, { t: x.aware, pause: 9 }]);
+        else if (p === 1) api.narrate(x.steps.map((t, i) => ({ t, pause: i === x.steps.length - 1 ? 8 : 6 })));
+        else if (p === 2) api.narrate([{ t: x.say, pause: 10 }, { t: 'Cứ để cơ thể nghỉ thêm một chút.', pause: 6 }]);
+        else api.narrate([{ t: x.feel, pause: 9 }]);
+      };
+
+      const tick = () => {
+        const now = performance.now();
+        left -= Math.min(1, (now - lastTs) / 1000); lastTs = now;
+        const total = STATIONS[si].sec[pi];
+        const bar = $('#stbar', stage);
+        if (bar) bar.style.width = Math.min(100, (1 - left / total) * 100) + '%';
+        if (left <= 0) nextPhase();
+      };
+      const startTimer = () => {
+        stopTimer();
+        left = STATIONS[si].sec[pi]; lastTs = performance.now(); running = true;
+        timer = setInterval(tick, 200);
+      };
+      const nextPhase = () => {
+        stopTimer();
+        pi++;
+        if (pi >= PHASES.length) { chime(528, 1); renderStation(); return; }
+        chime(pi === 2 ? 396 : 440, 0.5);
+        startTimer(); renderStation();
+      };
+      const openStation = k => { si = k; pi = 0; view = 'station'; startTimer(); renderStation(); scrollTop(); };
+
+      const renderEnd = () => {
+        stopTimer(); view = 'end'; drawMap();
+        const member = api.state.mode === 'member' && api.hasConsent('store_narrative');
+        stage.innerHTML = `
+          <div class="st-end">
+            <h2>Cảm nhận sự thay đổi</h2>
+            <p>Mời bạn cảm nhận lại toàn bộ cơ thể: hơi thở, hai vai, khuôn mặt, rồi tới tâm trí.</p>
+            <ul class="st-checklist">${STATIONS.map(x => `<li>${s.done.includes(x.key) ? '✅' : '⬜'} ${x.check}</li>`).join('')}</ul>
+            <p class="st-progress">${s.done.length}/4 trạm đã trải nghiệm</p>
+            <label class="label" for="st-after">Bây giờ mức căng thẳng của bạn là bao nhiêu? <small>(0–10)</small></label>
+            <div class="capy-wrap" id="st-capy2">${api.capy(s.after)}</div>
+            <input type="range" id="st-after" min="0" max="10" value="${s.after ?? s.before ?? 5}">
+            <div class="scale-ends"><span>0 · rất nhẹ nhõm</span><span>10 · rất căng</span></div>
+            <p id="st-afterv" aria-live="polite">${s.after == null ? 'Kéo thanh trượt nếu muốn trả lời' : `<b>${s.after}</b> · ${D.DISTRESS_LABELS[s.after]}`}</p>
+            <p class="label">Bộ phận nào bạn cảm nhận rõ sự thả lỏng nhất?</p>
+            <div class="chips">${[...STATIONS.map(x => ({ code: x.key, label: x.short })), { code: 'unsure', label: 'Chưa rõ' }]
+              .map(o => `<button class="chip ${s.bestZone === o.code ? 'on' : ''}" aria-pressed="${s.bestZone === o.code}" data-zone-pick="${o.code}">${o.label}</button>`).join('')}</div>
+            <label class="label" for="st-notice">Bạn có nhận ra điều gì trước đây mình thường bỏ qua không? <small>(tùy chọn)</small></label>
+            <textarea id="st-notice" rows="2" maxlength="300" placeholder="Ví dụ: mình hay siết hàm khi đang viết hồ sơ…">${api.esc(s.notice)}</textarea>
+            <p class="fine">${member ? 'Ghi chú này được lưu vào hành trình của bạn.' : 'Ghi chú này không được lưu.'}</p>
+            <blockquote class="st-message">
+              Thả lỏng không có nghĩa là phải ngừng suy nghĩ hay loại bỏ mọi căng thẳng. Thả lỏng là <b>nhận ra khi cơ thể đang gồng lên và cho phép mình buông xuống một chút</b>.
+              Một hơi thở nhẹ nhàng. Một đôi vai mềm xuống. Một khuôn mặt thư thái. Một tâm trí bớt bị cuốn theo suy nghĩ.
+            </blockquote>
+            <p class="gentle">Bạn không cần phải thấy thư giãn hơn ngay. Điều quan trọng là bạn đã nhận biết được trạng thái của mình.</p>
+            <div class="btn-row center"><button class="btn primary" data-act="finishExercise">Check-out ›</button></div>
+          </div>`;
+        const r = $('#st-after', stage);
+        r.addEventListener('input', () => {
+          s.after = +r.value; api.state.session.distressAfter = s.after;
+          $('#st-capy2', stage).innerHTML = api.capy(s.after);
+          $('#st-afterv', stage).innerHTML = `<b>${s.after}</b> · ${D.DISTRESS_LABELS[s.after]}`;
+        });
+        $('#st-notice', stage).addEventListener('input', e => { s.notice = e.target.value; });
+        api.narrate([
+          { t: 'Mời bạn cảm nhận lại toàn bộ cơ thể: hơi thở, hai vai, khuôn mặt, rồi tới tâm trí.', pause: 9 },
+          { t: 'Bây giờ mức độ căng thẳng của bạn là bao nhiêu, trên thang 0 đến 10? Bộ phận nào bạn cảm nhận rõ sự thả lỏng nhất?', pause: 8 },
+          { t: 'Thả lỏng không có nghĩa là chúng ta phải ngừng suy nghĩ hay loại bỏ mọi căng thẳng. Thả lỏng là nhận ra khi cơ thể đang gồng lên, và cho phép mình buông xuống một chút.', pause: 5 },
+          { t: 'Một hơi thở nhẹ nhàng. Một đôi vai mềm xuống. Một khuôn mặt thư thái. Một tâm trí bớt bị cuốn theo suy nghĩ. Chỉ vài phút như vậy cũng có thể trở thành một khoảng nghỉ ý nghĩa trong ngày.', pause: 2 }
+        ]);
+        scrollTop();
+      };
+
+      const scrollTop = () => {
+        if (first) { first = false; return; }
+        map.scrollIntoView({ block: 'start', behavior: api.reduceMotion() ? 'auto' : 'smooth' });
+      };
+
+      api.lifecycle.on(body, 'click', e => {
+        const b = e.target.closest('[data-st], [data-zone-pick]');
+        if (!b) return;
+        if (b.dataset.zonePick) {
+          s.bestZone = s.bestZone === b.dataset.zonePick ? null : b.dataset.zonePick;
+          $$('[data-zone-pick]', stage).forEach(c => { const on = c.dataset.zonePick === s.bestZone; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
+          return;
+        }
+        const a = b.dataset.st, x = STATIONS[si];
+        if (a === 'start') { getCtx(); openStation(0); }
+        else if (a === 'jump') { getCtx(); openStation(+b.dataset.i); }
+        else if (a === 'toggle') { if (running) { stopTimer(); renderStation(); } else { lastTs = performance.now(); running = true; timer = setInterval(tick, 200); renderStation(); } }
+        else if (a === 'skip-phase') nextPhase();
+        else if (a === 'skip-station') {
+          if (!s.done.includes(x.key) && !s.skipped.includes(x.key)) s.skipped.push(x.key);
+          stopTimer();
+          if (si < 3) openStation(si + 1); else renderEnd();
+        } else if (a === 'check') {
+          if (!s.done.includes(x.key)) s.done.push(x.key);
+          s.skipped = s.skipped.filter(k => k !== x.key);
+          vibrate(20); drawMap();
+          if (si < 3) openStation(si + 1); else renderEnd();
+        } else if (a === 'again') { openStation(si); }
+        else if (a === 'next-station') { stopTimer(); openStation(si + 1); }
+        else if (a === 'end') renderEnd();
+      });
+
+      drawMap();
+      renderIntro();
+      return () => { stopTimer(); if (view === 'station') renderStation(); };
+    }
+  };
+
   /* ================= Hành trình STOP-4P (trò chơi 9 chặng) ================= */
   const S4_STEPS = [
-    { key: 'checkin', icon: '📍', title: 'Check-in', sub: 'Mình đang ở đâu lúc này?' },
-    { key: 'monkeys', icon: '🐒', title: 'STOP bầy khỉ', sub: 'Ra lệnh cho bầy khỉ suy nghĩ dừng lại' },
-    { key: 'dragon', icon: '🐉', title: 'Rồng thổi chong chóng', sub: 'Hít vào – thở ra cùng bé rồng' },
-    { key: 'pain', icon: '📌', title: 'Điểm đau', sub: 'Cơ thể đang căng hay mỏi ở đâu?' },
-    { key: 'relax', icon: '💆', title: 'Thư giãn', sub: 'Lần lượt thả lỏng từng vùng' },
-    { key: 'name', icon: '🏷️', title: 'Gọi tên cảm xúc', sub: 'Gọi tên để có một khoảng cách nhỏ' },
-    { key: 'clouds', icon: '☁️', title: 'Đám mây', sub: 'Để suy nghĩ trôi qua như mây' },
-    { key: 'connect', icon: '💗', title: 'Kết nối bản thân', sub: 'Nói với mình như nói với một đồng nghiệp thân' },
-    { key: 'gratitude', icon: '🌱', title: '3 lời biết ơn', sub: 'Nếu phù hợp lúc này' }
+    {
+      key: 'checkin', icon: '📍', title: 'Check-in', sub: 'Mình đang ở đâu lúc này?',
+      say: ['Trước khi bắt đầu, mời bạn dừng lại một chút và tự hỏi: lúc này mình đang thế nào?', { t: 'Mức khó chịu của bạn đang ở đâu, trên thang từ 0 đến 10? Không có câu trả lời đúng hay sai. Chỉ là nhận biết.', pause: 8 }]
+    },
+    {
+      key: 'monkeys', icon: '🐒', title: 'STOP bầy khỉ', sub: 'Ra lệnh cho bầy khỉ suy nghĩ dừng lại',
+      say: ['Khi căng thẳng, suy nghĩ thường nhảy nhót liên tục như một bầy khỉ.', { t: 'Hãy nhấn và giữ chiếc chuông trong ba giây, như một lời nói với chính mình: dừng lại.', pause: 6 }, { t: 'Dừng lại. Mình đang ở đây, trong khoảnh khắc này.', pause: 6 }]
+    },
+    {
+      key: 'dragon', icon: '🐉', title: 'Rồng thổi chong chóng', sub: 'Hít vào – thở ra cùng bé rồng',
+      say: ['Bé rồng sẽ thở cùng bạn.', { t: 'Giữ nút để hít vào nhẹ nhàng, bụng rồng phồng lên. Rồi thả tay ra, thở ra thật chậm cho chong chóng quay.', pause: 7 }, { t: 'Khoảng ba hơi thở, hoặc bao nhiêu bạn thấy thoải mái. Không cần nín thở, không cần gắng sức.', pause: 6 }]
+    },
+    {
+      key: 'pain', icon: '📌', title: 'Điểm đau', sub: 'Cơ thể đang căng hay mỏi ở đâu?',
+      say: [{ t: 'Hãy đưa sự chú ý đi một vòng quanh cơ thể, và chạm vào những nơi đang căng, mỏi hay khó chịu.', pause: 8 }, { t: 'Chỉ nhận biết thôi, không phán xét. Mệt mỏi sau một ca làm việc dài là điều rất bình thường.', pause: 6 }]
+    },
+    {
+      key: 'relax', icon: '💆', title: 'Thư giãn', sub: 'Lần lượt thả lỏng từng vùng',
+      say: [{ t: 'Bây giờ, mình sẽ đi qua từng vùng cơ thể và thả lỏng nhẹ nhàng.', pause: 5 }, { t: 'Làm theo từng lời gợi ý, rồi xác nhận khi bạn thấy vùng đó đã mềm ra. Thả lỏng thay cho gồng.', pause: 5 }]
+    },
+    {
+      key: 'name', icon: '🏷️', title: 'Gọi tên cảm xúc', sub: 'Gọi tên để có một khoảng cách nhỏ',
+      say: [{ t: 'Lúc này bạn đang cảm thấy gì? Hãy chọn những tấm thẻ giống với bạn nhất.', pause: 7 }, { t: 'Cảm xúc không đúng cũng không sai. Gọi tên được nó, mình đã có một khoảng cách nhỏ với nó rồi.', pause: 6 }]
+    },
+    {
+      key: 'clouds', icon: '☁️', title: 'Đám mây', sub: 'Để suy nghĩ trôi qua như mây',
+      say: [{ t: 'Suy nghĩ nào đang lởn vởn trong đầu bạn? Viết ngắn gọn rồi thả nó thành một đám mây.', pause: 8 }, { t: 'Bạn không cần xua đuổi hay phân tích. Suy nghĩ đến rồi đi, còn bạn là bầu trời.', pause: 6 }]
+    },
+    {
+      key: 'connect', icon: '💗', title: 'Kết nối bản thân', sub: 'Nói với mình như nói với một đồng nghiệp thân',
+      say: [{ t: 'Mời bạn đặt một tay lên ngực, hoặc lên cánh tay mình.', pause: 6 }, { t: 'Nếu một đồng nghiệp thân thiết đang trải qua đúng điều này, bạn sẽ nói gì với họ? Hãy nói điều đó với chính mình.', pause: 9 }]
+    },
+    {
+      key: 'gratitude', icon: '🌱', title: '3 lời biết ơn', sub: 'Nếu phù hợp lúc này',
+      say: [{ t: 'Nếu thấy phù hợp, bạn thử nhớ lại ba điều nhỏ đã nâng đỡ mình hôm nay.', pause: 8 }, { t: 'Nếu hôm nay là một ngày khó khăn, bạn hoàn toàn có thể bỏ qua phần này. Điều đó ổn.', pause: 5 }]
+    }
   ];
   const MONKEY_THOUGHTS = ['Còn 3 hồ sơ!', 'Chuông gọi!', 'Người nhà chờ…', 'Quên gì chưa?', 'Ca sau sao đây?', 'Mệt quá…', 'Tin nhắn!', 'Lỡ sai thì…', 'Chưa ăn trưa', 'Giao ban!'];
   const RELAX_SEQ = [
@@ -604,10 +922,10 @@
           stage.innerHTML = frame(s, k, `
             <div class="dragon-scene">
               <div class="dragon" id="dragon" aria-hidden="true"><span>🐉</span></div>
-              <div class="wind" id="wind" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="wind" id="wind" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
               <div class="pinwheel-wrap" aria-hidden="true">
                 <svg viewBox="-50 -50 100 100" class="pinwheel" id="pin">
-                  <g id="pinrot">
+                  <g class="rotor">
                     <path d="M0 0 L0 -44 Q22 -30 0 0" fill="#F28B82"/><path d="M0 0 L44 0 Q30 22 0 0" fill="#FBBC04"/>
                     <path d="M0 0 L0 44 Q-22 30 0 0" fill="#34A853"/><path d="M0 0 L-44 0 Q-30 -22 0 0" fill="#4FC3F7"/>
                     <circle r="5" fill="#fff" stroke="#999"/>
@@ -620,36 +938,52 @@
             <p id="dmsg" class="center" aria-live="polite">Nhấn giữ nút để hít vào (bụng rồng phồng lên), thả ra để thở ra thật chậm.</p>
             <div class="center"><button class="hold-btn" id="hold">Giữ để hít vào</button></div>
             <p class="center fine">Hơi thở: <b id="bc">${g.breaths}</b> · gợi ý 3 hơi, hoặc bao nhiêu bạn thấy thoải mái. Không cần nín thở.</p>`);
-          const btn = $('#hold', stage), dragon = $('#dragon', stage), rot = $('#pinrot', stage), ebar = $('#ebar', stage), dmsg = $('#dmsg', stage), wind = $('#wind', stage);
-          let holding = false, energy = 0, wind0 = 0, angle = 0;
-          const down = e => { if (e.type === 'keydown' && (e.repeat || !['Enter', ' '].includes(e.key))) return; e.preventDefault(); holding = true; dmsg.textContent = 'Hít vào nhẹ nhàng… bụng rồng phồng lên'; btn.classList.add('on'); };
+          const btn = $('#hold', stage), dragon = $('#dragon', stage), pin = $('#pin', stage), ebar = $('#ebar', stage), dmsg = $('#dmsg', stage), wind = $('#wind', stage);
+          /* Chuyển động do CSS đảm nhiệm (không phụ thuộc nhịp vẽ của JS):
+           * - hít vào: bụng rồng phồng dần, chong chóng TẠM DỪNG tại chỗ, gió tắt;
+           * - thở ra: gió thổi và chong chóng quay LIÊN TỤC cho tới khi người chơi nhấn giữ hơi thở sau. */
+          const FULL_MS = 4000;   // giữ 4 giây là bụng rồng đầy
+          const EXHALE_MS = 2600; // bụng xẹp dần khi thở ra
+          let holding = false, startMs = 0;
+          const setBelly = (scale, ms, ease) => {
+            dragon.style.transition = `transform ${ms}ms ${ease}`;
+            dragon.style.transform = `scale(${-scale}, ${scale})`; // âm theo trục X: rồng luôn nhìn về chong chóng
+            ebar.style.transition = `width ${ms}ms ${ease}`;
+          };
+          const down = e => {
+            if (e.type === 'keydown' && (e.repeat || !['Enter', ' '].includes(e.key))) return;
+            e.preventDefault();
+            if (holding) return;
+            holding = true; startMs = performance.now();
+            pin.classList.remove('spinning');          // chong chóng ngưng ngay khi bắt đầu hít vào
+            wind.classList.remove('blowing');
+            setBelly(1.36, FULL_MS, 'linear'); ebar.style.width = '100%';
+            dmsg.textContent = 'Hít vào nhẹ nhàng… bụng rồng phồng lên, chong chóng nghỉ';
+            btn.classList.add('on'); btn.textContent = 'Đang hít vào… thả ra để thở';
+          };
           const up = () => {
             if (!holding) return;
-            holding = false; btn.classList.remove('on');
-            if (energy >= 20) {
-              wind0 = energy; g.breaths++; $('#bc', stage).textContent = g.breaths;
-              dmsg.textContent = 'Thở ra thật chậm… chong chóng quay';
-              if (!api.reduceMotion()) { wind.classList.remove('blow'); void wind.offsetWidth; wind.classList.add('blow'); }
-              if (g.breaths >= 3) { markDone('dragon'); drawMap(); }
-            } else dmsg.textContent = 'Giữ lâu hơn một chút khi hít vào nhé';
+            holding = false; btn.classList.remove('on'); btn.textContent = 'Giữ để hít vào';
+            const energy = Math.min(100, (performance.now() - startMs) / FULL_MS * 100);
+            setBelly(1, EXHALE_MS, 'ease-out'); ebar.style.width = '0%';
+            if (energy < 20) { dmsg.textContent = 'Giữ lâu hơn một chút khi hít vào nhé'; return; }
+            // hơi càng đầy → chong chóng quay càng nhanh, rồi giữ đều cho tới hơi thở sau
+            pin.style.setProperty('--dur', Math.max(0.9, 3.2 - energy / 45).toFixed(2) + 's');
+            pin.classList.add('spinning');
+            if (!api.reduceMotion()) wind.classList.add('blowing');
+            g.breaths++; $('#bc', stage).textContent = g.breaths;
+            dmsg.textContent = 'Thở ra thật chậm… gió đưa chong chóng quay';
+            if (g.breaths >= 3) { markDone('dragon'); drawMap(); }
+            sub.later(() => {
+              if (holding) return;
+              dmsg.textContent = g.breaths >= 3
+                ? 'Chong chóng vẫn quay. Bạn có thể tiếp tục, hoặc nhấn giữ để thở thêm một hơi.'
+                : 'Chong chóng vẫn quay. Khi sẵn sàng, nhấn giữ để hít vào hơi tiếp theo.';
+            }, EXHALE_MS);
           };
           sub.on(btn, 'pointerdown', down); sub.on(btn, 'keydown', down);
           ['pointerup', 'pointerleave', 'pointercancel', 'keyup'].forEach(t => sub.on(btn, t, up));
           sub.on(btn, 'contextmenu', e => e.preventDefault());
-          sub.loop(dt => {
-            if (holding) {
-              energy = Math.min(100, energy + dt * 25);
-              if (energy >= 100) dmsg.textContent = 'Đủ rồi — thả ra, thở ra từ từ nhé';
-            } else {
-              energy = Math.max(0, energy - dt * 16);
-              if (wind0 > 0 && energy === 0) { wind0 = 0; dmsg.textContent = g.breaths >= 3 ? 'Tuyệt. Bạn có thể tiếp tục, hoặc thở thêm vài hơi.' : 'Sẵn sàng cho hơi thở tiếp theo'; }
-            }
-            dragon.style.transform = `scale(${1 + energy / 280})`;
-            ebar.style.width = energy + '%';
-            const speed = holding ? 20 : (wind0 ? energy * 7 : 10);
-            angle = (angle + speed * dt) % 360;
-            rot.setAttribute('transform', `rotate(${angle})`);
-          });
         },
 
         pain(s, k) {
@@ -802,9 +1136,14 @@
       function show() {
         clearStep();
         drawMap();
-        if (g.i >= S4_STEPS.length) { STEP.end(); return; }
+        if (g.i >= S4_STEPS.length) {
+          STEP.end();
+          api.narrate([{ t: 'Bạn đã đi hết hành trình. Bạn đã dành thời gian cho chính mình — điều đó đáng quý, dù bạn làm đủ hay bỏ qua chặng nào.', pause: 4 }]);
+          return;
+        }
         const s = S4_STEPS[g.i];
         STEP[s.key](s, g.i);
+        if (s.say) api.narrate(s.say);
         if (!firstShow) {
           const h = $('.s4-head h2', stage);
           if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
@@ -827,5 +1166,5 @@
     }
   };
 
-  window.STOP4P_PLAYERS = { breath, steps, grounding, pmr, journal, gratitude, audio, recovery, journey };
+  window.STOP4P_PLAYERS = { breath, steps, grounding, pmr, journal, gratitude, audio, recovery, journey, stations };
 })();
